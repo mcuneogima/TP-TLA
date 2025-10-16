@@ -1,4 +1,5 @@
 #include "BisonActions.h"
+#include <string.h>
 
 /* MODULE INTERNAL STATE */
 
@@ -36,50 +37,58 @@ static void _logSyntacticAnalyzerAction(const char * functionName) {
 
 /* PUBLIC FUNCTIONS */
 
-Constant * IntegerConstantSemanticAction(const int value) {
+HtmlNode *TagSemanticAction(const char *tagName, HtmlNode *children) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
-	Constant * constant = calloc(1, sizeof(Constant));
-	constant->value = value;
-	return constant;
+	HtmlNode *node = createTagNode(tagName, children);
+	logDebugging(_logger, "Created Tag Node <%s>", tagName);
+	return node;
 }
 
-Expression * ArithmeticExpressionSemanticAction(Expression * leftExpression, Expression * rightExpression, ExpressionType type) {
+HtmlNode *TextSemanticAction(char *text) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
-	Expression * expression = calloc(1, sizeof(Expression));
-	expression->leftExpression = leftExpression;
-	expression->rightExpression = rightExpression;
-	expression->type = type;
-	return expression;
+	HtmlNode *node = createTextNode(text);
+	logDebugging(_logger, "Created Text Node \"%s\"", text);
+	return node;
 }
 
-Expression * FactorExpressionSemanticAction(Factor * factor) {
+HtmlNode *AppendSiblingSemanticAction(HtmlNode *list, HtmlNode *newNode) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
-	Expression * expression = calloc(1, sizeof(Expression));
-	expression->factor = factor;
-	expression->type = FACTOR;
-	return expression;
+	HtmlNode *result = appendSibling(list, newNode);
+	logDebugging(_logger, "Appended sibling node");
+	return result;
 }
 
-Factor * ConstantFactorSemanticAction(Constant * constant) {
+Attribute *AttributeSemanticAction(const char *name, const char *value) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
-	Factor * factor = calloc(1, sizeof(Factor));
-	factor->constant = constant;
-	factor->type = CONSTANT;
-	return factor;
+	Attribute *attr = createAttribute(name, value);
+	logDebugging(_logger, "Created Attribute: %s=\"%s\"", name, value);
+	return attr;
 }
 
-Factor * ExpressionFactorSemanticAction(Expression * expression) {
+Program *ProgramSemanticAction(HtmlNode *root) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
-	Factor * factor = calloc(1, sizeof(Factor));
-	factor->expression = expression;
-	factor->type = EXPRESSION;
-	return factor;
-}
-
-Program * ExpressionProgramSemanticAction(Expression * expression) {
-	_logSyntacticAnalyzerAction(__FUNCTION__);
-	Program * program = calloc(1, sizeof(Program));
-	program->expression = expression;
-	_compilerState->abstractSyntaxtTree = program;
+	Program *program = createHtmlProgram(root);
+	if (_compilerState)
+		_compilerState->abstractSyntaxtTree = program;
+	logDebugging(_logger, "ProgramSemanticAction completed");
 	return program;
 }
+
+Attribute *appendAttribute(Attribute *list, Attribute *newAttr) {
+    _logSyntacticAnalyzerAction(__FUNCTION__);
+    if (!list) return newAttr;
+    Attribute *curr = list;
+    while (curr->next) curr = curr->next;
+    curr->next = newAttr;
+    logDebugging(_logger, "Appended attribute %s", newAttr->name);
+    return list;
+}
+
+HtmlNode *TagWithAttributesSemanticAction(const char *tagName, HtmlNode *children, Attribute *attrs) {
+    _logSyntacticAnalyzerAction(__FUNCTION__);
+    HtmlNode *node = createTagNode(tagName, children);
+    node->attributes = attrs;
+    logDebugging(_logger, "Created Tag Node <%s> with attributes", tagName);
+    return node;
+}
+

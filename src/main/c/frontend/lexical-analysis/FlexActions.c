@@ -101,10 +101,19 @@ CompilationStatus UnknownLexemeAction() {
 }
 
 CompilationStatus EOFLexemeAction() {
-    Token * token = createToken(_lexicalAnalyzer, EOF_TOKEN);
-    pushToken(_lexicalAnalyzer, token);
-    destroyToken(token);
-    return SUCCEEDED;
+	CompilationStatus status = IN_PROGRESS;
+	Token * token = createToken(_lexicalAnalyzer, 0);
+	_logTokenAction(__FUNCTION__, token);
+	if (!popInputBuffer(_lexicalAnalyzer)) {
+		status = pushToken(_lexicalAnalyzer, token);
+		FlexContext context = currentLexicalAnalyzerContext(_lexicalAnalyzer);
+		if (0 < context) {
+			logError(_logger, "The final context is not closed (context=%d).", context);
+			status = FAILED;
+		}
+	}
+	destroyToken(token);
+	return status;
 }
 
 CompilationStatus AttributeNameLexemeAction() {

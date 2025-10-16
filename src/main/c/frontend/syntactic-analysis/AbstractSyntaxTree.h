@@ -1,78 +1,54 @@
-#ifndef ABSTRACT_SYNTAX_TREE_HEADER
-#define ABSTRACT_SYNTAX_TREE_HEADER
+#ifndef ABSTRACT_SYNTAX_TREE_HTML_HEADER
+#define ABSTRACT_SYNTAX_TREE_HTML_HEADER
 
 #include "../../support/logging/Logger.h"
 #include "../../support/type/ModuleDestructor.h"
 #include <stdlib.h>
 
-/** Initialize module's internal state. */
 ModuleDestructor initializeAbstractSyntaxTreeModule();
 
-/**
- * This type definitions allows self-referencing types (e.g., an expression
- * that is made of another expressions, such as talking about you in 3rd
- * person, but without the madness).
- */
+typedef enum {
+    NODE_HTML,
+    NODE_TAG,
+    NODE_TEXT,
+    NODE_ATTRIBUTE,
+    NODE_ROOT
+} NodeType;
 
-typedef enum ExpressionType ExpressionType;
-typedef enum FactorType FactorType;
-
-typedef struct Constant Constant;
-typedef struct Expression Expression;
-typedef struct Factor Factor;
+typedef struct Attribute Attribute;
+typedef struct HtmlNode HtmlNode;
 typedef struct Program Program;
 
-/**
- * Node types for the Abstract Syntax Tree (AST).
- */
-
-enum ExpressionType {
-	ADDITION,
-	DIVISION,
-	FACTOR,
-	MULTIPLICATION,
-	SUBTRACTION
+struct Attribute {
+    char *name;
+    char *value;
+    Attribute *next;
 };
 
-enum FactorType {
-	CONSTANT,
-	EXPRESSION
-};
-
-struct Constant {
-	int value;
-};
-
-struct Factor {
-	union {
-		Constant * constant;
-		Expression * expression;
-	};
-	FactorType type;
-};
-
-struct Expression {
-	union {
-		Factor * factor;
-		struct {
-			Expression * leftExpression;
-			Expression * rightExpression;
-		};
-	};
-	ExpressionType type;
+struct HtmlNode {
+    NodeType type;
+    char *tagName;
+    char *text;
+    Attribute *attributes;
+    HtmlNode *children;
+    HtmlNode *next;
 };
 
 struct Program {
-	Expression * expression;
+    HtmlNode *root;
 };
 
-/**
- * Node recursive super-duper-trambolik-destructors.
- */
+/* Constructores */
+HtmlNode *createTagNode(const char *tagName, HtmlNode *children);
+HtmlNode *createTextNode(char *text);
+HtmlNode *appendSibling(HtmlNode *list, HtmlNode *newNode);
+HtmlNode *appendChild(HtmlNode *parent, HtmlNode *child);
+Attribute *createAttribute(const char *name, const char *value);
+Program *createHtmlProgram(HtmlNode *root);
 
-void destroyConstant(Constant * constant);
-void destroyExpression(Expression * expression);
-void destroyFactor(Factor * factor);
-void destroyProgram(Program * program);
+/* Destructores */
+void destroyHtmlNode(HtmlNode *node);
+void destroyAttribute(Attribute *attr);
+void destroyProgram(Program *program);
 
 #endif

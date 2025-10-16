@@ -18,19 +18,16 @@ extern CompilationStatus EOFLexemeAction();
 
 extern CompilationStatus AttributeNameLexemeAction();
 extern CompilationStatus AttributeValueLexemeAction();
-%}
 
-%{
-/* Estado actual del tag abierto */
+/*** Estado actual del tag abierto */
 static TokenLabel _currentOpenTag = UNKNOWN;
 %}
 
-/* Contextos */
+/** Contextos */
 %x COMMENT
 %x TAG_ATTRS
-%x ATTR_VALUE
 
-/* Patrones reutilizables */
+/** Patrones reutilizables */
 whitespace   [ \t\r\n]+
 identifier   [A-Za-z_:][A-Za-z0-9_:.-]*
 dqstring     \"([^\"\\]|\\.)*\"
@@ -38,13 +35,14 @@ sqstring     \'([^\'\\]|\\.)*\'
 
 %%
 
-<!--                          { BEGIN(COMMENT); return CommentLexemeAction(); }
-<COMMENT>-->                 { BEGIN(INITIAL); return IgnoredLexemeAction(); }
+"<!--"                       { BEGIN(COMMENT); return CommentLexemeAction(); }
+<COMMENT>"-->"               { BEGIN(INITIAL); return IgnoredLexemeAction(); }
 <COMMENT>[^-]+               { return IgnoredLexemeAction(); }
 <COMMENT>-+                  { return IgnoredLexemeAction(); }
+%{
+/** ==== TAGS DE APERTURA ==== */
+%}
 
-/* ==== TAGS DE APERTURA ==== */
-/* Cuando abrimos un tag, pasamos a un estado donde podemos tener atributos */
 "<html>"                     { return TagOpenLexemeAction(HTML_OPEN); }
 "<head>"                     { return TagOpenLexemeAction(HEAD_OPEN); }
 "<body>"                     { return TagOpenLexemeAction(BODY_OPEN); }
@@ -64,24 +62,26 @@ sqstring     \'([^\'\\]|\\.)*\'
 "<h5>"                       { return TagOpenLexemeAction(H5_OPEN); }
 "<h6>"                       { return TagOpenLexemeAction(H6_OPEN); }
 
-/* ==== TAGS CON ATRIBUTOS ==== */
-/* Tags que pueden tener atributos. Entramos a estado TAG_ATTRS */
+%{
+/** ==== TAGS CON ATRIBUTOS ==== */
+%}
+
 "<img"   { _currentOpenTag = IMG_OPEN; BEGIN(TAG_ATTRS); return TagOpenLexemeAction(IMG_OPEN); }
 "<input" { _currentOpenTag = INPUT_OPEN; BEGIN(TAG_ATTRS); return TagOpenLexemeAction(INPUT_OPEN); }
 
-/* ==== ATRIBUTOS ==== */
+%{
+/** ==== ATRIBUTOS ==== */
+%}
+
 <TAG_ATTRS>{whitespace}      { return IgnoredLexemeAction(); }
 <TAG_ATTRS>{identifier}      { return AttributeNameLexemeAction(); }
 <TAG_ATTRS>"="               { return IgnoredLexemeAction(); }
 <TAG_ATTRS>{dqstring}        { return AttributeValueLexemeAction(); }
 <TAG_ATTRS>{sqstring}        { return AttributeValueLexemeAction(); }
 
-/* Cerramos el tag */
-<TAG_ATTRS>[ \t]*">" {
-    BEGIN(INITIAL);
-    _currentOpenTag = UNKNOWN;
-    return IgnoredLexemeAction();
-}
+%{
+/** Cerramos el tag */
+%}
 
 <TAG_ATTRS>[ \t]*/">" {
     BEGIN(INITIAL);
@@ -96,12 +96,24 @@ sqstring     \'([^\'\\]|\\.)*\'
     return status;
 }
 
-/* ==== SELF-CLOSING ==== */
+<TAG_ATTRS>[ \t]*">" {
+    BEGIN(INITIAL);
+    _currentOpenTag = UNKNOWN;
+    return IgnoredLexemeAction();
+}
+
+%{
+/** ==== SELF-CLOSING ==== */
+%}
+
 "<input/>"                   { return SelfClosingTagLexemeAction(INPUT_SELF); }
 "<img/>"                     { return SelfClosingTagLexemeAction(IMG_SELF); }
 "<head/>"                    { return SelfClosingTagLexemeAction(HEAD_SELF); }
 
-/* ==== TAGS DE CIERRE ==== */
+%{
+/** ==== TAGS DE CIERRE ==== */
+%}
+
 "</html>"                    { return TagCloseLexemeAction(HTML_CLOSE); }
 "</body>"                    { return TagCloseLexemeAction(BODY_CLOSE); }
 "</div>"                     { return TagCloseLexemeAction(DIV_CLOSE); }
@@ -118,13 +130,42 @@ sqstring     \'([^\'\\]|\\.)*\'
 "</h5>"                      { return TagCloseLexemeAction(H5_CLOSE); }
 "</h6>"                      { return TagCloseLexemeAction(H6_CLOSE); }
 
-/* ==== TEXTO ==== */
+%{
+/** ==== TEXTO ==== */
+%}
+
 [^<>\n\t\r]+                 { return TextLexemeAction(); }
 
 {whitespace}                 { return IgnoredLexemeAction(); }
 
-/* ==== ERROR ==== */
+%{
+/** ==== ERROR ==== */
+%}
+
 .                            { return UnknownLexemeAction(); }
 
 <<EOF>>                      { return EOFLexemeAction(); }
 %%
+
+
+#include "FlexActions.h"
+
+/* Implementación de funciones de acceso a Flex */
+
+FlexContext flexCurrentContext(LexicalAnalyzer * lexicalAnalyzer) {
+	struct yyguts_t * yyg = (struct yyguts_t *) lexicalAnalyzer->scanner;
+	return YYSTATE;  /* YYSTATE es la macro correcta, no YY_CURRENT_STATE */
+}
+
+void flexEnterContext(LexicalAnalyzer * lexicalAnalyzer, FlexContext flexContext) {
+	yy_push_state(flexContext, lexicalAnalyzer->scanner);
+}
+
+bool flexHasBuffer(LexicalAnalyzer * lexicalAnalyzer) {
+	struct yyguts_t * yyg = (struct yyguts_t *) lexicalAnalyzer->scanner;
+	return YY_CURRENT_BUFFER != NULL;  /* Esta macro SÍ existe */
+}
+
+void flexLeaveContext(LexicalAnalyzer * lexicalAnalyzer) {
+	yy_pop_state(lexicalAnalyzer->scanner);
+}
