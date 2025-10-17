@@ -39,9 +39,6 @@ sqstring     \'([^\'\\]|\\.)*\'
 <COMMENT>"-->"               { BEGIN(INITIAL); return IgnoredLexemeAction(); }
 <COMMENT>[^-]+               { return IgnoredLexemeAction(); }
 <COMMENT>-+                  { return IgnoredLexemeAction(); }
-%{
-/** ==== TAGS DE APERTURA ==== */
-%}
 
 "<html>"                     { return TagOpenLexemeAction(HTML_OPEN); }
 "<head>"                     { return TagOpenLexemeAction(HEAD_OPEN); }
@@ -54,6 +51,7 @@ sqstring     \'([^\'\\]|\\.)*\'
 "<button>"                   { return TagOpenLexemeAction(BUTTON_OPEN); }
 "<header>"                   { return TagOpenLexemeAction(HEADER_OPEN); }
 "<footer>"                   { return TagOpenLexemeAction(FOOTER_OPEN); }
+"<span>"                     { return TagOpenLexemeAction(SPAN_OPEN); }
 
 "<h1>"                       { return TagOpenLexemeAction(H1_OPEN); }
 "<h2>"                       { return TagOpenLexemeAction(H2_OPEN); }
@@ -61,6 +59,16 @@ sqstring     \'([^\'\\]|\\.)*\'
 "<h4>"                       { return TagOpenLexemeAction(H4_OPEN); }
 "<h5>"                       { return TagOpenLexemeAction(H5_OPEN); }
 "<h6>"                       { return TagOpenLexemeAction(H6_OPEN); }
+
+%{
+/** ==== SELF-CLOSING TAGS ==== */
+%}
+
+"<br/>"                      { return SelfClosingTagLexemeAction(BR_SELF); }
+"<br>"                       { return SelfClosingTagLexemeAction(BR_SELF); }
+"<input/>"                   { return SelfClosingTagLexemeAction(INPUT_SELF); }
+"<img/>"                     { return SelfClosingTagLexemeAction(IMG_SELF); }
+"<head/>"                    { return SelfClosingTagLexemeAction(HEAD_SELF); }
 
 %{
 /** ==== TAGS CON ATRIBUTOS ==== */
@@ -80,10 +88,10 @@ sqstring     \'([^\'\\]|\\.)*\'
 <TAG_ATTRS>{sqstring}        { return AttributeValueLexemeAction(); }
 
 %{
-/** Cerramos el tag */
+/** Cerramos el tag con atributos */
 %}
 
-<TAG_ATTRS>[ \t]*/">" {
+<TAG_ATTRS>[ \t]*"/>" {
     BEGIN(INITIAL);
     CompilationStatus status;
     if (_currentOpenTag == IMG_OPEN)
@@ -103,14 +111,6 @@ sqstring     \'([^\'\\]|\\.)*\'
 }
 
 %{
-/** ==== SELF-CLOSING ==== */
-%}
-
-"<input/>"                   { return SelfClosingTagLexemeAction(INPUT_SELF); }
-"<img/>"                     { return SelfClosingTagLexemeAction(IMG_SELF); }
-"<head/>"                    { return SelfClosingTagLexemeAction(HEAD_SELF); }
-
-%{
 /** ==== TAGS DE CIERRE ==== */
 %}
 
@@ -123,6 +123,7 @@ sqstring     \'([^\'\\]|\\.)*\'
 "</button>"                  { return TagCloseLexemeAction(BUTTON_CLOSE); }
 "</header>"                  { return TagCloseLexemeAction(HEADER_CLOSE); }
 "</footer>"                  { return TagCloseLexemeAction(FOOTER_CLOSE); }
+"</span>"                    { return TagCloseLexemeAction(SPAN_CLOSE); }
 "</h1>"                      { return TagCloseLexemeAction(H1_CLOSE); }
 "</h2>"                      { return TagCloseLexemeAction(H2_CLOSE); }
 "</h3>"                      { return TagCloseLexemeAction(H3_CLOSE); }
@@ -154,7 +155,7 @@ sqstring     \'([^\'\\]|\\.)*\'
 
 FlexContext flexCurrentContext(LexicalAnalyzer * lexicalAnalyzer) {
 	struct yyguts_t * yyg = (struct yyguts_t *) lexicalAnalyzer->scanner;
-	return YYSTATE;  /* YYSTATE es la macro correcta, no YY_CURRENT_STATE */
+	return YYSTATE;
 }
 
 void flexEnterContext(LexicalAnalyzer * lexicalAnalyzer, FlexContext flexContext) {
@@ -163,7 +164,7 @@ void flexEnterContext(LexicalAnalyzer * lexicalAnalyzer, FlexContext flexContext
 
 bool flexHasBuffer(LexicalAnalyzer * lexicalAnalyzer) {
 	struct yyguts_t * yyg = (struct yyguts_t *) lexicalAnalyzer->scanner;
-	return YY_CURRENT_BUFFER != NULL;  /* Esta macro SÍ existe */
+	return YY_CURRENT_BUFFER != NULL;
 }
 
 void flexLeaveContext(LexicalAnalyzer * lexicalAnalyzer) {

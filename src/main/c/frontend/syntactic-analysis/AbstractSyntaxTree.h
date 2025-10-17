@@ -43,7 +43,7 @@ HtmlNode *createTagNode(const char *tagName, HtmlNode *children);
 HtmlNode *createTextNode(char *text);
 HtmlNode *appendSibling(HtmlNode *list, HtmlNode *newNode);
 HtmlNode *appendChild(HtmlNode *parent, HtmlNode *child);
-Attribute *createAttribute(const char *name, const char *value);
+Attribute *createAttribute(char *name, char *value);
 Program *createHtmlProgram(HtmlNode *root);
 
 /* Destructores */

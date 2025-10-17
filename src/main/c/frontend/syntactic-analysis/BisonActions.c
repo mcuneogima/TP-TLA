@@ -58,7 +58,7 @@ HtmlNode *AppendSiblingSemanticAction(HtmlNode *list, HtmlNode *newNode) {
 	return result;
 }
 
-Attribute *AttributeSemanticAction(const char *name, const char *value) {
+Attribute *AttributeSemanticAction(char *name, char *value) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
 	Attribute *attr = createAttribute(name, value);
 	logDebugging(_logger, "Created Attribute: %s=\"%s\"", name, value);

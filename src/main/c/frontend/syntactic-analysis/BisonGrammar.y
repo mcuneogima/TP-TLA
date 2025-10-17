@@ -57,6 +57,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %token UL_OPEN UL_CLOSE
 %token LI_OPEN LI_CLOSE
 %token P_OPEN P_CLOSE
+%token SPAN_OPEN SPAN_CLOSE
 %token BUTTON_OPEN BUTTON_CLOSE
 %token H1_OPEN H1_CLOSE
 %token H2_OPEN H2_CLOSE
@@ -65,7 +66,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %token H5_OPEN H5_CLOSE
 %token H6_OPEN H6_CLOSE
 %token INPUT_OPEN IMG_OPEN
-%token INPUT_SELF IMG_SELF HEAD_SELF
+%token INPUT_SELF IMG_SELF HEAD_SELF BR_SELF
 %token IGNORED UNKNOWN
 
 
@@ -74,6 +75,10 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %type <node> html head_opt body elements element
 %type <program> program
 %type <attribute> attribute attributes
+
+%destructor { if ($$) destroyHtmlNode($$); } <node>
+%destructor { if ($$) destroyAttribute($$); } <attribute>
+%destructor { if ($$) free($$); } <string>
 
 
 /**
@@ -112,7 +117,13 @@ elements:
 element:
       P_OPEN TEXT P_CLOSE               { $$ = TagSemanticAction("p", TextSemanticAction($2)); }
     | BUTTON_OPEN TEXT BUTTON_CLOSE     { $$ = TagSemanticAction("button", TextSemanticAction($2)); }
+	| SPAN_OPEN TEXT SPAN_CLOSE         { $$ = TagSemanticAction("span", TextSemanticAction($2)); }
     | H1_OPEN TEXT H1_CLOSE             { $$ = TagSemanticAction("h1", TextSemanticAction($2)); }
+	| H2_OPEN TEXT H2_CLOSE             { $$ = TagSemanticAction("h2", TextSemanticAction($2)); }
+    | H3_OPEN TEXT H3_CLOSE             { $$ = TagSemanticAction("h3", TextSemanticAction($2)); }
+    | H4_OPEN TEXT H4_CLOSE             { $$ = TagSemanticAction("h4", TextSemanticAction($2)); }
+    | H5_OPEN TEXT H5_CLOSE             { $$ = TagSemanticAction("h5", TextSemanticAction($2)); }
+    | H6_OPEN TEXT H6_CLOSE             { $$ = TagSemanticAction("h6", TextSemanticAction($2)); }
 	| HEADER_OPEN elements HEADER_CLOSE { $$ = TagSemanticAction("header", $2); }
     | FOOTER_OPEN elements FOOTER_CLOSE { $$ = TagSemanticAction("footer", $2); }
     | DIV_OPEN elements DIV_CLOSE       { $$ = TagSemanticAction("div", $2); }
@@ -120,6 +131,7 @@ element:
 	| INPUT_OPEN attributes INPUT_SELF	{ $$ = TagWithAttributesSemanticAction("input", NULL, $2); }
     | UL_OPEN elements UL_CLOSE         { $$ = TagSemanticAction("ul", $2); }
     | LI_OPEN TEXT LI_CLOSE             { $$ = TagSemanticAction("li", TextSemanticAction($2)); }
+	| BR_SELF                           { $$ = TagSemanticAction("br", NULL); }
     | TEXT                              { $$ = TextSemanticAction($1); }
     ;
 

@@ -50,11 +50,11 @@ HtmlNode *appendChild(HtmlNode *parent, HtmlNode *child) {
     return parent;
 }
 
-Attribute *createAttribute(const char *name, const char *value) {
+Attribute *createAttribute(char *name, char *value) {
     logDebugging(_logger, "Creating Attribute: %s=\"%s\"", name, value);
     Attribute *attr = calloc(1, sizeof(Attribute));
-    attr->name = strdup(name);
-    attr->value = strdup(value);
+    attr->name = name;
+    attr->value = value;
     return attr;
 }
 
