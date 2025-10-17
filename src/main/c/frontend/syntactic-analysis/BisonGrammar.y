@@ -51,6 +51,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %token HTML_OPEN HTML_CLOSE
 %token HEAD_OPEN HEAD_CLOSE
 %token BODY_OPEN BODY_CLOSE
+%token TITLE_OPEN TITLE_CLOSE
 %token HEADER_OPEN HEADER_CLOSE
 %token FOOTER_OPEN FOOTER_CLOSE
 %token DIV_OPEN DIV_CLOSE
@@ -72,7 +73,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 
 
 /** Non-terminals. */
-%type <node> html head_opt body elements element
+%type <node> html head_opt body elements element li_elements li_element
 %type <program> program
 %type <attribute> attribute attributes
 
@@ -102,7 +103,17 @@ html:
 
 head_opt:
       HEAD_OPEN elements HEAD_CLOSE     { $$ = TagSemanticAction("head", $2); }
-    | %empty                            { $$ = NULL; }
+	| HEAD_OPEN TITLE_OPEN TEXT TITLE_CLOSE HEAD_CLOSE
+                                                    { 
+                                                       HtmlNode *title = TagSemanticAction("title", TextSemanticAction($3));
+                                                       $$ = TagSemanticAction("head", title);
+                                                    }
+    | HEAD_OPEN TITLE_OPEN TITLE_CLOSE HEAD_CLOSE   
+                                                    { 
+                                                       HtmlNode *title = TagSemanticAction("title", NULL);
+                                                       $$ = TagSemanticAction("head", title);
+                                                    }
+    | %empty                            			{ $$ = NULL; }
     ;
 
 body:
@@ -116,24 +127,48 @@ elements:
 
 element:
       P_OPEN TEXT P_CLOSE               { $$ = TagSemanticAction("p", TextSemanticAction($2)); }
+    | P_OPEN P_CLOSE                    { $$ = TagSemanticAction("p", NULL); }
     | BUTTON_OPEN TEXT BUTTON_CLOSE     { $$ = TagSemanticAction("button", TextSemanticAction($2)); }
-	| SPAN_OPEN TEXT SPAN_CLOSE         { $$ = TagSemanticAction("span", TextSemanticAction($2)); }
+    | BUTTON_OPEN BUTTON_CLOSE          { $$ = TagSemanticAction("button", NULL); }
+    | SPAN_OPEN TEXT SPAN_CLOSE         { $$ = TagSemanticAction("span", TextSemanticAction($2)); }
+    | SPAN_OPEN SPAN_CLOSE              { $$ = TagSemanticAction("span", NULL); }
     | H1_OPEN TEXT H1_CLOSE             { $$ = TagSemanticAction("h1", TextSemanticAction($2)); }
-	| H2_OPEN TEXT H2_CLOSE             { $$ = TagSemanticAction("h2", TextSemanticAction($2)); }
+    | H1_OPEN H1_CLOSE                  { $$ = TagSemanticAction("h1", NULL); }
+    | H2_OPEN TEXT H2_CLOSE             { $$ = TagSemanticAction("h2", TextSemanticAction($2)); }
+    | H2_OPEN H2_CLOSE                  { $$ = TagSemanticAction("h2", NULL); }
     | H3_OPEN TEXT H3_CLOSE             { $$ = TagSemanticAction("h3", TextSemanticAction($2)); }
+    | H3_OPEN H3_CLOSE                  { $$ = TagSemanticAction("h3", NULL); }
     | H4_OPEN TEXT H4_CLOSE             { $$ = TagSemanticAction("h4", TextSemanticAction($2)); }
+    | H4_OPEN H4_CLOSE                  { $$ = TagSemanticAction("h4", NULL); }
     | H5_OPEN TEXT H5_CLOSE             { $$ = TagSemanticAction("h5", TextSemanticAction($2)); }
+    | H5_OPEN H5_CLOSE                  { $$ = TagSemanticAction("h5", NULL); }
     | H6_OPEN TEXT H6_CLOSE             { $$ = TagSemanticAction("h6", TextSemanticAction($2)); }
-	| HEADER_OPEN elements HEADER_CLOSE { $$ = TagSemanticAction("header", $2); }
+    | H6_OPEN H6_CLOSE                  { $$ = TagSemanticAction("h6", NULL); }
+    | HEADER_OPEN elements HEADER_CLOSE { $$ = TagSemanticAction("header", $2); }
+    | HEADER_OPEN HEADER_CLOSE          { $$ = TagSemanticAction("header", NULL); }
     | FOOTER_OPEN elements FOOTER_CLOSE { $$ = TagSemanticAction("footer", $2); }
+    | FOOTER_OPEN FOOTER_CLOSE          { $$ = TagSemanticAction("footer", NULL); }
     | DIV_OPEN elements DIV_CLOSE       { $$ = TagSemanticAction("div", $2); }
-	| IMG_OPEN attributes IMG_SELF 		{ $$ = TagWithAttributesSemanticAction("img", NULL, $2); }
-	| INPUT_OPEN attributes INPUT_SELF	{ $$ = TagWithAttributesSemanticAction("input", NULL, $2); }
-    | UL_OPEN elements UL_CLOSE         { $$ = TagSemanticAction("ul", $2); }
-    | LI_OPEN TEXT LI_CLOSE             { $$ = TagSemanticAction("li", TextSemanticAction($2)); }
-	| BR_SELF                           { $$ = TagSemanticAction("br", NULL); }
+    | DIV_OPEN DIV_CLOSE                { $$ = TagSemanticAction("div", NULL); }
+    | IMG_OPEN attributes IMG_SELF      { $$ = TagWithAttributesSemanticAction("img", NULL, $2); }
+    | INPUT_OPEN attributes INPUT_SELF  { $$ = TagWithAttributesSemanticAction("input", NULL, $2); }
+    | BR_SELF                           { $$ = TagSemanticAction("br", NULL); }
     | TEXT                              { $$ = TextSemanticAction($1); }
+	| UL_OPEN li_elements UL_CLOSE      { $$ = TagSemanticAction("ul", $2); }
+	| UL_OPEN UL_CLOSE                  { $$ = TagSemanticAction("ul", NULL); }
+	;
+
+li_elements:
+      li_element                       { $$ = $1; }
+    | li_elements li_element           { $$ = AppendSiblingSemanticAction($1, $2); }
     ;
+
+li_element:
+      LI_OPEN TEXT LI_CLOSE            { $$ = TagSemanticAction("li", TextSemanticAction($2)); }
+    | LI_OPEN LI_CLOSE                 { $$ = TagSemanticAction("li", NULL); }
+    ;
+
+
 
 
 	attribute:

@@ -43,6 +43,7 @@ sqstring     \'([^\'\\]|\\.)*\'
 "<html>"                     { return TagOpenLexemeAction(HTML_OPEN); }
 "<head>"                     { return TagOpenLexemeAction(HEAD_OPEN); }
 "<body>"                     { return TagOpenLexemeAction(BODY_OPEN); }
+"<title>"                    { return TagOpenLexemeAction(TITLE_OPEN); }
 
 "<div>"                      { return TagOpenLexemeAction(DIV_OPEN); }
 "<ul>"                       { return TagOpenLexemeAction(UL_OPEN); }
@@ -116,6 +117,8 @@ sqstring     \'([^\'\\]|\\.)*\'
 
 "</html>"                    { return TagCloseLexemeAction(HTML_CLOSE); }
 "</body>"                    { return TagCloseLexemeAction(BODY_CLOSE); }
+"</head>"                    { return TagCloseLexemeAction(HEAD_CLOSE); }
+"</title>"                   { return TagCloseLexemeAction(TITLE_CLOSE); }
 "</div>"                     { return TagCloseLexemeAction(DIV_CLOSE); }
 "</ul>"                      { return TagCloseLexemeAction(UL_CLOSE); }
 "</li>"                      { return TagCloseLexemeAction(LI_CLOSE); }
