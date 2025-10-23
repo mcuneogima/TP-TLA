@@ -26,6 +26,8 @@ static TokenLabel _currentOpenTag = UNKNOWN;
 /** Contextos */
 %x COMMENT
 %x TAG_ATTRS
+%x SCRIPT
+%x STYLE
 
 /** Patrones reutilizables */
 whitespace   [ \t\r\n]+
@@ -39,6 +41,18 @@ sqstring     \'([^\'\\]|\\.)*\'
 <COMMENT>"-->"               { BEGIN(INITIAL); return IgnoredLexemeAction(); }
 <COMMENT>[^-]+               { return IgnoredLexemeAction(); }
 <COMMENT>-+                  { return IgnoredLexemeAction(); }
+
+"<script"([^>])*">"          { BEGIN(SCRIPT); return IgnoredLexemeAction(); }
+"<style"([^>])*">"           { BEGIN(STYLE);  return IgnoredLexemeAction(); }
+
+
+<SCRIPT>"</script>"          { BEGIN(INITIAL); return IgnoredLexemeAction(); }
+<SCRIPT>.|\n                 { return IgnoredLexemeAction(); }
+
+<STYLE>"</style>"            { BEGIN(INITIAL); return IgnoredLexemeAction(); }
+<STYLE>.|\n                  { return IgnoredLexemeAction(); }
+
+
 
 "<html>"                     { return TagOpenLexemeAction(HTML_OPEN); }
 "<head>"                     { return TagOpenLexemeAction(HEAD_OPEN); }
