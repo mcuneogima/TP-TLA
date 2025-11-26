@@ -13,6 +13,7 @@ static unsigned int _footerCounter = 0;
 typedef struct ComponentList {
     char * name;
     HtmlNode * content;
+    HtmlNode * originalNode;
     struct ComponentList * next;
 } ComponentList;
 
@@ -65,7 +66,7 @@ static const char * _getTextStyle(const char * tagName);
 static char * _getAttributeValue(Attribute * attributes, const char * name);
 static int _matchesPattern(HtmlNode * node, const char * pattern);
 static void _generatePattern(const unsigned int indentationLevel, HtmlNode * node, const char * pattern);
-static void _addComponent(const char * name, HtmlNode * content);
+static void _addComponent(const char * name, HtmlNode * content, HtmlNode * originalNode);
 static void _generateComponent(const unsigned int indentationLevel, const char * name, HtmlNode * content);
 static void _generateAllComponents(void);
 static void _generateCustomCard(const unsigned int indentationLevel, HtmlNode * node);
@@ -74,6 +75,8 @@ static void _generateImageWithFooter(const unsigned int indentationLevel, HtmlNo
 static char * _extractTextContent(HtmlNode * node);
 static void _generateBaseComponents(void);
 static int _isEmptyOrQuotes(const char * str);
+static void _collectComponents(const unsigned int indentationLevel, HtmlNode * node);
+static char * _findComponentByNode(HtmlNode * node);
 
 /**
  * Checks if a string is NULL, empty, or just "".
@@ -261,10 +264,11 @@ static void _generateImageWithFooter(const unsigned int indentationLevel, HtmlNo
 /**
  * Adds a component to the list.
  */
-static void _addComponent(const char * name, HtmlNode * content) {
+static void _addComponent(const char * name, HtmlNode * content, HtmlNode * originalNode) {
     ComponentList * newComponent = (ComponentList *)malloc(sizeof(ComponentList));
     newComponent->name = strdup(name);
     newComponent->content = content;
+    newComponent->originalNode = originalNode;
     newComponent->next = _components;
     _components = newComponent;
 }
@@ -343,6 +347,20 @@ static void _generateComponent(const unsigned int indentationLevel, const char *
 }
 
 /**
+ * Finds a component name by its original node.
+ */
+static char * _findComponentByNode(HtmlNode * node) {
+    ComponentList * current = _components;
+    while (current != NULL) {
+        if (current->originalNode == node) {
+            return current->name;
+        }
+        current = current->next;
+    }
+    return NULL;
+}
+
+/**
  * Generates all collected components.
  */
 static void _generateAllComponents(void) {
@@ -381,6 +399,43 @@ static void _generateEpilogue(void) {
 }
 
 /**
+ * First pass: collects header and footer components without generating output.
+ */
+static void _collectComponents(const unsigned int indentationLevel, HtmlNode * node) {
+    if (node == NULL) {
+        return;
+    }
+    
+    if (node->type == NODE_TAG) {
+        if (node->tagName != NULL) {
+            // Collect header components
+            if (strcmp(node->tagName, "header") == 0) {
+                char componentName[64];
+                sprintf(componentName, "HeaderComponent%d", ++_headerCounter);
+                _addComponent(componentName, node->children, node);
+            }
+            
+            // Collect footer components
+            if (strcmp(node->tagName, "footer") == 0) {
+                char componentName[64];
+                sprintf(componentName, "FooterComponent%d", ++_footerCounter);
+                _addComponent(componentName, node->children, node);
+            }
+            
+            // Recursively collect from children
+            if (node->children != NULL) {
+                _collectComponents(indentationLevel + 1, node->children);
+            }
+        }
+    }
+    
+    // Process siblings
+    if (node->next != NULL) {
+        _collectComponents(indentationLevel, node->next);
+    }
+}
+
+/**
  * Generates the output of the program.
  */
 static void _generateProgram(Program * program) {
@@ -391,12 +446,17 @@ static void _generateProgram(Program * program) {
     
     logDebugging(_logger, "Generating program from AST...");
     
-    // Generate all components first
+    // First pass: collect components (header/footer)
+    _collectComponents(1, program->root);
+    
+    // Generate all collected components
     _generateAllComponents();
     
     // Generate main view
     _output(0, "@Composable\n");
     _output(0, "fun GeneratedView() {\n");
+    
+    // Second pass: generate actual code
     _generateNode(1, program->root);
 }
 
@@ -447,18 +507,18 @@ static void _generateTag(const unsigned int indentationLevel, HtmlNode * node) {
     
     // Handle header and footer as components
     if (strcmp(node->tagName, "header") == 0) {
-        char componentName[64];
-        sprintf(componentName, "HeaderComponent%d", ++_headerCounter);
-        _addComponent(componentName, node->children);
-        _output(indentationLevel, "%s()\n", componentName);
+        char * componentName = _findComponentByNode(node);  
+        if (componentName != NULL) {
+            _output(indentationLevel, "%s()\n", componentName);
+        }
         return;
     }
     
     if (strcmp(node->tagName, "footer") == 0) {
-        char componentName[64];
-        sprintf(componentName, "FooterComponent%d", ++_footerCounter);
-        _addComponent(componentName, node->children);
-        _output(indentationLevel, "%s()\n", componentName);
+        char * componentName = _findComponentByNode(node);  
+        if (componentName != NULL) {
+            _output(indentationLevel, "%s()\n", componentName);
+        }
         return;
     }
     
